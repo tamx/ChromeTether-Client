@@ -1,0 +1,33 @@
+{
+  "manifest_version": 2,
+  "name": "Chrome BT App",
+  "description": "Asial blog sample",
+  "version": "0.1",
+  "minimum_chrome_version": "37",
+  "icons": {
+    "16": "chromebt.png",
+    "48": "chromebt.png",
+    "128": "chromebt.png"
+  },
+  "app": {
+    "background": {
+      "scripts": [
+        "background.js"
+      ]
+    }
+  },
+  "sockets": {
+    "tcp": {
+      "connect": "*"
+    },
+    "tcpServer": {
+      "listen": "*"
+    }
+  },
+  "bluetooth": {
+    "socket": true,
+    "uuids": [
+      "0000000c-0000-1000-8000-00805f9b34fb"
+    ]
+  }
+}
