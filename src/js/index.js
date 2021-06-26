@@ -394,7 +394,7 @@ $(function() {
         var session = idlist[id];
         if (session !== undefined) {
             // printBTLog("id close: " + id);
-            session.receiveDown.call(session);
+            session.closeUp.call(session);
             closeSession(id);
         }
         // console.log("Error: ", info);

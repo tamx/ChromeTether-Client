@@ -17,13 +17,17 @@ Session.prototype.writeDown = function(data, offset, count) {
 
 Session.prototype.closeDown = function() {
     this.down_alive = false;
-    this.closer(this);
+    if (this.closer !== null) {
+        this.closer(this);
+    }
     this.checkAlive();
 };
 
 Session.prototype.checkAlive = function() {
     if (!this.up_alive && !this.down_alive) {
-        this.sessions.deleteSession.call(this.sessions, this.port);
+        if (this.sessions !== null) {
+            this.sessions.deleteSession.call(this.sessions, this.port);
+        }
         this.sessions = null;
         this.port = null;
         this.speaker = null;
@@ -63,8 +67,10 @@ SessionInSession.prototype.deleteSession = function(port) {
     var session = this.portlist[port];
     this.portlist[port] = null;
     delete this.portlist[port];
-    session.closeUp();
-    session.closeDown();
+    if (session !== undefined) {
+        session.closeUp();
+        session.closeDown();
+    }
 };
 
 var portCount = 0;
