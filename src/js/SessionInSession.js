@@ -180,7 +180,7 @@ SessionInSession.prototype.parse = function(buffer) {
             break;
         case 'F'.charCodeAt(0):
             {
-                var session4 = this.getThisSession(port);
+                var session4 = this.getSession(port);
                 if (session4 !== undefined) {
                     session4.closeDown.call(session4);
                     // this.deleteThisSession(port);
@@ -189,7 +189,7 @@ SessionInSession.prototype.parse = function(buffer) {
             break;
         case 'F'.charCodeAt(0):
             {
-                var session4 = this.getThisSession(port);
+                var session4 = this.getSession(port);
                 if (session4 !== undefined) {
                     session4.closeUp.call(session4);
                     session4.closeDown.call(session4);
