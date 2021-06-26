@@ -1,37 +1,31 @@
-Session = function (sessions, port, that, speaker, closer) {
+Session = function(sessions, port, speaker, closer) {
     this.sessions = sessions;
     this.port = port;
-    this.that = that;
     this.speaker = speaker;
     this.closer = closer;
     this.up_alive = true;
     this.down_alive = true;
 };
 
-Session.prototype.getPort = function () {
+Session.prototype.getPort = function() {
     return this.port;
 };
 
-Session.prototype.writeDown = function (data, offset, count) {
+Session.prototype.writeDown = function(data, offset, count) {
     this.speaker(this, data, offset, count);
 };
 
-Session.prototype.closeDown = function () {
+Session.prototype.closeDown = function() {
     this.down_alive = false;
     this.closer(this);
     this.checkAlive();
 };
 
-Session.prototype.checkAlive = function () {
+Session.prototype.checkAlive = function() {
     if (!this.up_alive && !this.down_alive) {
-        if (this.that) {
-            this.sessions.deleteThatSession.call(this.sessions, this.port);
-        } else {
-            this.sessions.deleteThisSession.call(this.sessions, this.port);
-        }
+        this.sessions.deleteSession.call(this.sessions, this.port);
         this.sessions = null;
         this.port = null;
-        this.that = null;
         this.speaker = null;
         this.closer = null;
         this.up_alive = null;
@@ -39,65 +33,56 @@ Session.prototype.checkAlive = function () {
     }
 };
 
-Session.prototype.receiveDown = function () {
-    var code = this.that ? 'E' : 'V';
-    this.sessions.send.call(this.sessions, code, this.port, null, 0, 0);
+Session.prototype.closeUp = function() {
+    this.sessions.send.call(this.sessions, 'F',
+        this.port, null, 0, 0);
     this.up_alive = false;
     this.checkAlive();
 };
 
-Session.prototype.receive = function (buffer) {
-    var code = this.that ? 'D' : 'U';
+Session.prototype.receive = function(buffer) {
     var len = buffer.length;
-    this.sessions.send.call(this.sessions, code, this.port, buffer, 0, len);
+    this.sessions.send.call(this.sessions, 'D',
+        this.port, buffer, 0, len);
 };
 
 
-SessionInSession = function (listener, speaker) {
+SessionInSession = function(listener, speaker) {
     this.listener = listener;
     this.speaker = speaker;
-    this.thislist = {};
-    this.thatlist = {};
+    this.portlist = {};
     this.cache = new Uint8Array();
 };
 
-SessionInSession.prototype.getThisSession = function (port) {
-    var session = this.thislist[port];
+SessionInSession.prototype.getSession = function(port) {
+    var session = this.portlist[port];
     return session;
 };
 
-SessionInSession.prototype.getThatSession = function (port) {
-    var session = this.thatlist[port];
-    return session;
-};
-
-SessionInSession.prototype.deleteThisSession = function (port) {
-    var session = this.thislist[port];
-    this.thislist[port] = null;
-    delete this.thislist[port];
-};
-
-SessionInSession.prototype.deleteThatSession = function (port) {
-    this.send('E', port, null, 0, 0);
-    this.thatlist[port] = null;
-    delete this.thatlist[port];
+SessionInSession.prototype.deleteSession = function(port) {
+    var session = this.portlist[port];
+    this.portlist[port] = null;
+    delete this.portlist[port];
+    session.closeUp();
+    session.closeDown();
 };
 
 var portCount = 0;
 
-SessionInSession.prototype.create = function (speaker, closer) {
+SessionInSession.prototype.create = function(speaker, closer) {
     var port = ++portCount;
-    while (port === 0 || (port in this.thislist)) {
+    while (port === 0 || (port in this.portlist)) {
         port++;
     }
     // printBTLog("port create: " + port);
-    var session = new Session(this, port, false, speaker, closer);
-    this.thislist[port] = session;
-    this.send('O', port, null, 0, 0);
+    var session = new Session(this, port, speaker, closer);
+    this.portlist[port] = session;
+    this.send('S', port, null, 0, 0);
     return port;
 };
 
-SessionInSession.prototype.setInt = function (buffer, offset, value) {
+SessionInSession.prototype.setInt = function(buffer,
+    offset, value) {
     buffer[offset + 3] = (value) % 256;
     value /= 256;
     buffer[offset + 2] = (value) % 256;
@@ -107,7 +92,8 @@ SessionInSession.prototype.setInt = function (buffer, offset, value) {
     buffer[offset + 0] = (value) % 256;
 };
 
-SessionInSession.prototype.getInt = function (buffer, offset) {
+SessionInSession.prototype.getInt = function(buffer,
+    offset) {
     var value = 0;
     for (var i = 0; i < 4; i++) {
         value *= 256;
@@ -116,7 +102,8 @@ SessionInSession.prototype.getInt = function (buffer, offset) {
     return value;
 };
 
-SessionInSession.prototype.send = function (code, port, data, offset, length) {
+SessionInSession.prototype.send = function(code, port,
+    data, offset, length) {
     var buffer = new Uint8Array(1 + 4 + 4 + length);
     buffer[0] = code.charCodeAt(0);
     this.setInt(buffer, 1, port);
@@ -129,7 +116,7 @@ SessionInSession.prototype.send = function (code, port, data, offset, length) {
     // printBTLog("code send: " + code);
 };
 
-SessionInSession.prototype.receive = function (buffer) {
+SessionInSession.prototype.receive = function(buffer) {
     var length = this.cache.length;
     var cache_tmp = new Uint8Array(length + buffer.length);
     for (var i = 0; i < length; i++) {
@@ -161,7 +148,7 @@ SessionInSession.prototype.receive = function (buffer) {
     }
 };
 
-SessionInSession.prototype.parse = function (buffer) {
+SessionInSession.prototype.parse = function(buffer) {
     var code = buffer[0];
     var port = this.getInt(buffer, 1);
     var length = this.getInt(buffer, 5);
@@ -170,43 +157,41 @@ SessionInSession.prototype.parse = function (buffer) {
     switch (code) {
         case -1:
             return;
-        case 'O'.charCodeAt(0):
+        case 'S'.charCodeAt(0):
             {
                 var session = new Session(this, port, true);
-                this.thatlist[port] = session;
+                this.portlist[port] = session;
                 if (this.listener !== undefined) {
                     this.listener.call(this.listener, port);
                 }
+                this.send('A', port, null, 0, 0);
             }
             break;
-        case 'U'.charCodeAt(0):
-            {
-                var session1 = this.getThatSession(port);
-                if (session1 !== undefined) {
-                    session1.writeDown.call(session1, buffer, 9, length);
-                }
-            }
-            break;
-        case 'V'.charCodeAt(0):
-            {
-                var session2 = this.getThatSession(port);
-                if (session2 !== undefined) {
-                    this.deleteThatSession(port);
-                }
-            }
+        case 'A'.charCodeAt(0):
+            {}
             break;
         case 'D'.charCodeAt(0):
             {
-                var session3 = this.getThisSession(port);
+                var session3 = this.getSession(port);
                 if (session3 !== undefined) {
                     session3.writeDown.call(session3, buffer, 9, length);
                 }
             }
             break;
-        case 'E'.charCodeAt(0):
+        case 'F'.charCodeAt(0):
             {
                 var session4 = this.getThisSession(port);
                 if (session4 !== undefined) {
+                    session4.closeDown.call(session4);
+                    // this.deleteThisSession(port);
+                }
+            }
+            break;
+        case 'F'.charCodeAt(0):
+            {
+                var session4 = this.getThisSession(port);
+                if (session4 !== undefined) {
+                    session4.closeUp.call(session4);
                     session4.closeDown.call(session4);
                     // this.deleteThisSession(port);
                 }

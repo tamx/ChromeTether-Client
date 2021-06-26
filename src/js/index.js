@@ -1,4 +1,4 @@
-chrome.bluetooth.getAdapterState(function (result) {
+chrome.bluetooth.getAdapterState(function(result) {
     if (result) {
         console.log(result);
     } else {
@@ -15,7 +15,7 @@ function printBTLog(logmsg) {
     btLog.scrollTop(btLog[0].scrollHeight);
 }
 
-$(function () {
+$(function() {
     var sessioninsession = null;
     var serverSocketId;
     var idlist = {};
@@ -32,11 +32,11 @@ $(function () {
     var deviceOffset = 0;
 
     //  Start up Code	
-    var addDeviceName = function (device) {
+    var addDeviceName = function(device) {
         deviceArray[deviceCount++] = device;
         $('<option></option>').text(device.name).appendTo(btDeviceSelect);
     };
-    var updateDeviceName = function (device) {
+    var updateDeviceName = function(device) {
         flag = true;
         for (var i = 0; i < deviceCount; i++) {
             if (deviceArray[i].address == device.address) {
@@ -50,7 +50,7 @@ $(function () {
         }
         printBTLog('  Have a device update - ' + device.name);
     };
-    var removeDeviceName = function (device) {
+    var removeDeviceName = function(device) {
         delete device_names[device.address];
     };
     // Add listeners to receive newly found devices and updates
@@ -61,7 +61,7 @@ $(function () {
 
     // Get the list of paired devices.
     printBTLog("");
-    chrome.bluetooth.getDevices(function (devices) {
+    chrome.bluetooth.getDevices(function(devices) {
         for (var i = 0; i < devices.length; i++) {
             printBTLog('Found: ' + devices[i].name);
             deviceArray[deviceCount++] = devices[i];
@@ -69,18 +69,18 @@ $(function () {
             updateDeviceName(devices[i]);
         }
     });
-    chrome.bluetooth.startDiscovery(function () {
+    chrome.bluetooth.startDiscovery(function() {
         // Stop discovery after 3 seconds.
         printBTLog('Starting Bluetooth Device Scan.');
-        setTimeout(function () {
-            chrome.bluetooth.stopDiscovery(function () { });
+        setTimeout(function() {
+            chrome.bluetooth.stopDiscovery(function() {});
             printBTLog('Finished Scanning for Bluetooth Devices.');
             $('#selectedBTDevice').empty().text(btDeviceSelect.val());
         }, 30000);
     });
 
     $('#btDeviceSelect')
-        .change(function () {
+        .change(function() {
             $('#selectedBTDevice').empty().text($('#btDeviceSelect').val());
         });
 
@@ -97,7 +97,7 @@ $(function () {
             printBTLog('No Bluetooth Device Selected.');
             return;
         } else if (!socketID) {
-            chrome.bluetoothSocket.create(function (createInfo) {
+            chrome.bluetoothSocket.create(function(createInfo) {
                 if (chrome.runtime.lastError) {
                     AddConnectedSocketId(socketID = 0);
                     printBTLog("Socket Create Failed: " + chrome.runtime.lastError.message);
@@ -115,11 +115,11 @@ $(function () {
             printBTLog('Already connected.');
         }
     };
-    $('#btConnect').click(function () {
+    $('#btConnect').click(function() {
         startBTconnect();
     });
 
-    var onConnectedCallback = function () {
+    var onConnectedCallback = function() {
         if (chrome.runtime.lastError) {
             AddConnectedSocketId(socketID = 0);
             printBTLog("Connection failed: " + chrome.runtime.lastError.message);
@@ -170,13 +170,13 @@ $(function () {
     };
 
     $('#btDisconnect')
-        .click(function () {
+        .click(function() {
             printBTLog('');
             stopProxy();
         });
 
     $('#btGetDevice')
-        .click(function () {
+        .click(function() {
             deviceOffset = $("#btDeviceSelect")[0].selectedIndex;
             var deviceInfo = deviceArray[deviceOffset];
             printBTLog("");
@@ -212,7 +212,7 @@ $(function () {
         serverSocketId = createInfo.socketId;
 
         // 3000�ԃ|�[�g��listen
-        chrome.sockets.tcpServer.listen(serverSocketId, '0.0.0.0', 3000, function (resultCode) {
+        chrome.sockets.tcpServer.listen(serverSocketId, '0.0.0.0', 8080, function(resultCode) {
             if (resultCode < 0) {
                 printBTLog("Error listening:" + chrome.runtime.lastError.message);
             }
@@ -229,7 +229,7 @@ $(function () {
 
     function BTspeaker(data) {
         if (socketID) {
-            chrome.bluetoothSocket.send(socketID, data.buffer, function (bytes_sent) {
+            chrome.bluetoothSocket.send(socketID, data.buffer, function(bytes_sent) {
                 if (chrome.runtime.lastError) {
                     printBTLog("send Operation failed: " + chrome.runtime.lastError.message);
                 } else {
@@ -272,7 +272,7 @@ $(function () {
         if (serverSocketId === null) {
             return;
         }
-        chrome.sockets.tcpServer.disconnect(serverSocketId, function () {
+        chrome.sockets.tcpServer.disconnect(serverSocketId, function() {
             for (var key in idlist) {
                 var session = Number(key);
                 // �\�P�b�g�j��
@@ -281,7 +281,7 @@ $(function () {
                 delete idlist[key];
             }
             sessioninsession = null;
-            chrome.sockets.tcpServer.close(serverSocketId, function () {
+            chrome.sockets.tcpServer.close(serverSocketId, function() {
                 serverSocketId = null;
                 idlist = {};
                 printBTLog('Disconnect successful');
@@ -329,7 +329,7 @@ $(function () {
             for (var i = 0; i < length; i++) {
                 data2[i] = data[offset + i];
             }
-            chrome.sockets.tcp.send(id, data2.buffer, function (info) {
+            chrome.sockets.tcp.send(id, data2.buffer, function(info) {
                 if (info.resultCode < 0) {
                     var id = info.socketId;
                     printBTLog("Error sending:" + chrome.runtime.lastError.message);
@@ -351,11 +351,11 @@ $(function () {
         }
     }
 
-    var onAccept = function (info) {
+    var onAccept = function(info) {
         if (info.socketId === serverSocketId) {
             var id = info.clientSocketId;
             var port = sessioninsession.create.call(sessioninsession, TCPspeaker, TCPcloser);
-            var session = sessioninsession.getThisSession.call(sessioninsession, port);
+            var session = sessioninsession.getSession.call(sessioninsession, port);
             idlist[id] = session;
             chrome.sockets.tcp.setPaused(id, false);
             // printBTLog("id: " + id);
@@ -366,7 +366,7 @@ $(function () {
     /**
      * ���N�G�X�g���M
      */
-    var onTcpReceive = function (info) {
+    var onTcpReceive = function(info) {
         var id = info.socketId;
         // printBTLog("id recv: " + id);
 
@@ -408,7 +408,7 @@ $(function () {
         var session = idlist[id];
         if (session !== undefined) {
             delete idlist[id];
-            sessioninsession.deleteThisSession(id);
+            sessioninsession.deleteSession(id);
             chrome.sockets.tcp.disconnect(id);
             chrome.sockets.tcp.close(id);
         }
